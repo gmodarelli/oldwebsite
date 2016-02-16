@@ -1,3 +1,6 @@
+date: 2015-02-19
+title: My First Steps in Erlang
+---
 Today I will not publish a post about explaining source code because I want to share with you my experience 
 with Erlang.
 
