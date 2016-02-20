@@ -1,0 +1,27 @@
+{
+  "name": "gmodarelli.github.io",
+  "version": "1.0.0",
+  "description": "My Blog Engine",
+  "main": "index.js",
+  "dependencies": {
+    "ejs": "^2.4.1",
+    "highlight.js": "^9.1.0",
+    "jake": "^8.0.12",
+    "markdown-it": "^6.0.0",
+    "mkdirp": "^0.5.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gmodarelli/gmodarelli.github.io"
+  },
+  "author": "Giuseppe Modarelli",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gmodarelli/gmodarelli.github.io/issues"
+  },
+  "homepage": "http://gmodarelli.github.io"
+}

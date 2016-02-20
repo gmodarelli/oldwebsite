@@ -1,5 +1,6 @@
 require 'erb'
 require 'fileutils'
+require 'tempfile'
 
 class Post
   include ERB::Util
@@ -31,7 +32,14 @@ class Post
       body << line
     end
 
-    body = GitHub::Markup.render(markdown_path, body)
+    file = Tempfile.new('body')
+    file.write body
+    file.rewind
+    file.close
+
+    body = `./node_modules/marked/bin/marked #{file.path} --gfm`
+
+    file.unlink
 
     self.new(title, slug, body, date)
   end

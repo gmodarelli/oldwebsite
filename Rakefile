@@ -1,5 +1,3 @@
-require 'github/markup'
-require 'redcarpet'
 require_relative 'lib/post'
 
 task :publish do
