@@ -1,25 +1,32 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>Giuseppe Modarelli</title>
-    <link rel="stylesheet" href="/github-markdown-css/github-markdown.css">
-    <link rel="stylesheet" href="/node_modules/highlight.js/styles/github.css">
-    <style>
-      .markdown-body {
-        box-sizing: border-box;
-        min-width: 200px;
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 45px;
-      }
-    </style>
-  </head>
-  <body>
-    <article class="markdown-body">
-      <h1><%= title %></h1>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-      <%- body %>
-    </article>
+    <title><%= title %> | Giuseppe Modarelli</title>
+
+    <%- include css -%>
+  </head>
+
+  <body>
+    <%- include navbar -%>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <h1><%= title %></h1>
+          <h6><%= date %></h6>
+
+          <article class="markdown-body">
+            <%- body %>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <%- include js -%>
   </body>
 </html>
 
