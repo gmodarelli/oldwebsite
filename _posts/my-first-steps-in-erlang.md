@@ -1,5 +1,10 @@
 date: 2015-02-19
 title: My First Steps in Erlang
+extract:
+  >
+    Today I will not publish a post about explaining source code because I want to share with you my experience with Erlang.
+
+    If you want to know more about my series on Explaining Source Code you can out check my previous posts where we read the Dotenv gem.
 ---
 Today I will not publish a post about explaining source code because I want to share with you my experience 
 with Erlang.

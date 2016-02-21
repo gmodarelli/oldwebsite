@@ -4,7 +4,9 @@ var join = require('path').join;
 var ejs = require('ejs');
 var hljs = require('highlight.js');
 var mkdirp = require('mkdirp');
+var exec = require('child_process').exec;
 var yaml = require('js-yaml');
+var moment = require('moment');
 
 var md = require('markdown-it')({
   html: true,
@@ -37,7 +39,7 @@ var publish = function(post, destination) {
 
   var data = {
     title: post.title,
-    date: post.date,
+    date: moment(post.date).format('LL'),
     link: post.link,
     body: md.render(post.body)
   };
@@ -68,12 +70,24 @@ var parsePost = function(post_name) {
     title: meta.title,
     date: meta.date,
     link: link,
-    body: text
+    body: text,
+    extract: meta.extract
   };
 };
 
 var allPosts = function() {
   return JSON.parse(read('posts.json', 'utf8'));
+};
+
+var findPost = function(post_name) {
+  return allPosts()[post_name];
+};
+
+var deletePost = function(post_name) {
+  var posts = allPosts();
+  delete posts[post_name];
+
+  write('posts.json', JSON.stringify(posts));
 };
 
 var storePost = function(post) {
@@ -83,7 +97,8 @@ var storePost = function(post) {
     date: post.date,
     slug: post.slug,
     title: post.title,
-    link: post.link
+    link: post.link,
+    extract: post.extract
   };
 
   write('posts.json', JSON.stringify(posts));
@@ -112,9 +127,33 @@ task('home', function() {
 
   var posts = allPosts();
   var keys = Object.keys(posts);
-  var withoutKeys = keys.map(function(v) { return posts[v]; });
+  var withoutKeys = keys.map(function(v) {
+    var post = posts[v];
+    post.date = moment(post.date).format('LL');
+
+    if(post.extract != undefined) {
+      post.extract = md.render(post.extract);
+    }
+
+    return post;
+  });
 
   var html = ejs.render(template, { posts: withoutKeys }, { filename: join("templates", "index.ejs") });
 
   write(destination, html);
+});
+
+desc('Unpublish a post');
+task('unpublish', function(post_name) {
+  var post = findPost(post_name);
+  console.log(post);
+
+  if(post != undefined) {
+    deletePost(post_name);
+    exec('rm -rf ' + post.link, function(err, stdout, stderr) {
+      console.log(err);
+      console.log(stdout);
+      console.log(stderr);
+    });
+  }
 });

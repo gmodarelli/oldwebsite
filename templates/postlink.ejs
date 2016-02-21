@@ -1,3 +1,8 @@
 <div>
   <h3><a href="/<%= post.link %>"><%= post.title %></a></h3>
+  <h6><%= post.date %></h6>
+
+  <%- post.extract %>
+
+  <p><a href="/<%= post.link %>">More</a></p>
 </div>
