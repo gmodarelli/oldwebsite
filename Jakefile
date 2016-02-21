@@ -7,6 +7,7 @@ var mkdirp = require('mkdirp');
 var exec = require('child_process').exec;
 var yaml = require('js-yaml');
 var moment = require('moment');
+var _ = require('lodash');
 
 var md = require('markdown-it')({
   html: true,
@@ -76,7 +77,8 @@ var parsePost = function(post_name) {
 };
 
 var allPosts = function() {
-  return JSON.parse(read('posts.json', 'utf8'));
+  var posts = JSON.parse(read('posts.json', 'utf8'));
+  return posts;
 };
 
 var findPost = function(post_name) {
@@ -112,6 +114,16 @@ task('publish', function(post_name) {
   publish(post, destination);
 });
 
+desc('Unpublish a post');
+task('unpublish', function(post_name) {
+  var post = findPost(post_name);
+
+  if(post != undefined) {
+    deletePost(post_name);
+    exec('rm -rf ' + post.link);
+  }
+});
+
 desc('Draft a post');
 task('draft', function(year, month, post_name) {
   var post = parsePost(post_name);
@@ -127,9 +139,11 @@ task('home', function() {
 
   var posts = allPosts();
   var keys = Object.keys(posts);
-  var withoutKeys = keys.map(function(v) {
+
+  var sortedPosts = keys.map(function(v) {
     var post = posts[v];
-    post.date = moment(post.date).format('LL');
+    post.publishedOn = moment(post.date).format('LL');
+    post.date = moment(post.date);
 
     if(post.extract != undefined) {
       post.extract = md.render(post.extract);
@@ -138,22 +152,10 @@ task('home', function() {
     return post;
   });
 
-  var html = ejs.render(template, { posts: withoutKeys }, { filename: join("templates", "index.ejs") });
+  sortedPosts = _.reverse(_.sortBy(sortedPosts, function(p) { return p.date; }));
+
+  var html = ejs.render(template, { posts: sortedPosts }, { filename: join("templates", "index.ejs") });
 
   write(destination, html);
 });
 
-desc('Unpublish a post');
-task('unpublish', function(post_name) {
-  var post = findPost(post_name);
-  console.log(post);
-
-  if(post != undefined) {
-    deletePost(post_name);
-    exec('rm -rf ' + post.link, function(err, stdout, stderr) {
-      console.log(err);
-      console.log(stdout);
-      console.log(stderr);
-    });
-  }
-});
