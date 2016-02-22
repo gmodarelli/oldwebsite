@@ -163,7 +163,7 @@ all the parameters. Otherwise it just calls the block. In a simple use case(a si
 a Rails one) we won't need an `instrumenter`, so the block will be called. The block just calls the `apply`
 method on the instance of the `Environment` class.
 
-## `What we've learned`
+## What we've learned
 
 I'm running out of time today, so we'll continue exploring the `Dotenv` gem next Thursday. Before ending this
 post I'd like to recap what we learned reading this gem:
