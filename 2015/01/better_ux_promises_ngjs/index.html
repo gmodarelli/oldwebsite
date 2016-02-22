@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Better User Experience with Promises in AngularJS | Giuseppe Modarelli</title>
+
+    <!-- Bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+<!-- Base -->
+<link rel="stylesheet" href="/css/base.css">
+
+<!-- Github Flavored Markdown Style -->
+<link rel="stylesheet" href="/github-markdown-css/github-markdown.css">
+
+<!-- Github Code Highlight -->
+<link rel="stylesheet" href="/node_modules/highlight.js/styles/github.css">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">Giuseppe Modarelli</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+    </div><!--/.navbar-collapse -->
+  </div>
+</nav>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <h1><a href="/2015/01/better_ux_promises_ngjs">Better User Experience with Promises in AngularJS</a></h1>
+          <h6>February 9, 2015</h6>
+
+          <article class="markdown-body">
+            <p>We live in the golden age of software development. Writing mobile and web applications is becoming easier
+thanks to amazing and brand new technologies and thanks to growing communities around them.
+Frameworks like Rails and AngularJS (just to name a few) provides us the power to build a working prototype
+in hours, if not minutes sometimes. But along with technologies, users needs grow too.
+I remember the days when I first started doing web development there was a simple rule:
+“If you make a user wait more than 30 seconds on a page, he/she will go away”.</p>
+<p>30 seconds. I can’t believe it. Now we talk about milliseconds. If you can’t provide instant feedback to the
+user he/she will complain. Your clients will have unhappy customers, and you will have unhappy clients.
+Everyone will be unhappy!</p>
+<p>Users will trigger lots of blocking operations on your application. These are operations that your
+application depends on and that take long time to complete. Like, for example, an image upload with
+thumbnails generation.</p>
+<p>This is exactly what I’ll be talking about on this post.</p>
+<h2>My Experience</h2>
+<p>I had to implement, as part of a bigger application, a system that provided the user the ability to add
+custom images to a racing suit. The user could then manipulate those images (resize and rotate) and submit
+his/her design. Users could potentially load really big images and I couldn’t make them wait for the server
+to do the upload and the thumbnails generation.</p>
+<h2>Promises to the rescue</h2>
+<p>I solved the problem using Promises. This is not a post about promises but I promise I’ll go into details
+about them in a future post…</p>
+<p>Sorry.</p>
+<p>This is a simple list of the tasks to be implemented for the feature:</p>
+<ol>
+<li>Upload multiple images via drag &amp; drop (one at a time)</li>
+<li>Manage uploaded images through a “layers” list (kinda like the one on Photoshop)</li>
+<li>Select an image</li>
+<li>Remove the selected image</li>
+<li>Resize/Rotate the images</li>
+<li>Save the changes to the canvas</li>
+</ol>
+<p>Actually each of these task can be seen as an individual feature, because some of them are really complex
+(at least for me). For example, task n 1 involves all these subtasks:</p>
+<ol>
+<li>Upload multiple images via drag &amp; drop (one at a time)</li>
+<li>Take a dropped image</li>
+<li>Encode the image in base64 so it can be used as soon as possible into the canvas (see point 3 above)</li>
+<li>Upload the image to the backend</li>
+<li>Add a new layer to layers list with a thumbnail of the image</li>
+</ol>
+<p>For tasks 1.1 and 1.3 I’ve used a really cool library called
+<a href="https://github.com/danialfarid/angular-file-upload">angular-file-upload</a> by
+<a href="https://github.com/danialfarid">Danial Farid</a> that takes care of the drag &amp; drop and the file upload.</p>
+<p>After the user drops the file, the app uploads the image to the server which stores the image and generates
+a thumbnail. This thumbnail is later used in the app to show a preview on the layer.</p>
+<p>The library exposes an <code>upload</code> method that returns a promise. So we can start the upload, save the
+promise in a variable and pass it around to the pieces of code that will need the thumbnail. The library
+exposes also an handy API you can use to append callbacks to the promises when, for example, it get resolved
+or rejected (respectively success and error).</p>
+<p>While the server is doing its stuff, the application encodes the image in base64, creates the layer, adds the
+base64 encoded image to the canvas. This way we provide instant feedback to the user so he/she does not have
+to wait for the server to save the image and generate the  thumbnail. As soon as the user drops the image,
+he/she can begin to manipulate the image and can see the new layer in the layers list.</p>
+<p>Later on the server will send the thumbnail to the js app which will update the relative preview image in
+the layers list.</p>
+<p>Here’s an approximation of the code, with all the <em>irrelevant</em> bits left out.</p>
+<pre><code class="language-html"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">ng-controller</span>=<span class="hljs-string">"ImageCtrl"</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"ddarea"</span> <span class="hljs-attr">ng-file-drop</span>=<span class="hljs-string">"onFileDropped($files)"</span> <span class="hljs-attr">ng-file-drag-over-class</span>=<span class="hljs-string">"dropping"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>Drag &amp; Drop your design image here<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+
+  <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"layers"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"layer"</span> <span class="hljs-attr">ng-class</span>=<span class="hljs-string">"{ active : layer.active }"</span> <span class="hljs-attr">ng-repeat</span>=<span class="hljs-string">"layer in layers"</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">style</span>=<span class="hljs-string">"background-image: url({{layer.thumb}})"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">ng-click</span>=<span class="hljs-string">"removeLayer(layer)"</span>&gt;</span>Remove<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+
+  <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"canvas"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">canvas</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">canvas</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+</code></pre>
+<pre><code class="language-js">angular.module(<span class="hljs-string">'app'</span>)
+.service(<span class="hljs-string">'FileUploaderService'</span>, [<span class="hljs-string">'$upload'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">$upload</span>) </span>{
+  <span class="hljs-keyword">var</span> _upload: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">file</span>) </span>{
+    <span class="hljs-keyword">return</span> $upload.upload({
+      url: <span class="hljs-string">'/upload'</span>,
+      method: <span class="hljs-string">'POST'</span>,
+      file: file
+    })
+  };
+
+  <span class="hljs-keyword">return</span> {
+    upload: _upload
+  };
+}])
+.controller(<span class="hljs-string">'imageCtrl'</span>, [<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+  $scope.layers = [];
+  $scope.onFileDropped = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">$files</span>) </span>{
+    <span class="hljs-keyword">var</span> file = $files[<span class="hljs-number">0</span>];
+    <span class="hljs-keyword">if</span> (file !== <span class="hljs-literal">undefined</span>) {
+      <span class="hljs-keyword">var</span> uploadPromise = FileUploaderService.upload(file);
+      uploadPromise.error(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">response</span>) </span>{
+        $scope.notify(<span class="hljs-string">"Upload error: "</span> + response.message);
+      });
+
+      <span class="hljs-keyword">var</span> fileReader = <span class="hljs-keyword">new</span> FileReader;
+
+      fileReader.onload = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">var</span> layer = { 
+          active: <span class="hljs-literal">false</span>,
+          image = fileReader.result
+        };
+        $scope.createNewLayer(layer, uploadPromise);
+        $scope.addImageToCanvas(layer, uploadPromise);
+      };
+      fileReader.readAsDataURL(file);
+    }
+  };
+
+  $scope.createNewLayer = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">layer, uploadPromise</span>) </span>{
+    $scope.layers.push(layer);
+    uploadPromise.success(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">response</span>)</span>{
+      layer.thumb = response.thumb;
+    });
+    uploadPromise.error(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">response</span>) </span>{
+      $scope.layers.splice(_.indexOf($scope.layers, layer), <span class="hljs-number">1</span>);
+    });
+  };
+
+  $scope.addImageToCanvas = <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">layer</span>) </span>{
+    <span class="hljs-comment">// code to add the image to the canvas</span>
+    uploadPromise.error(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">response</span>) </span>{
+      <span class="hljs-comment">// Remove the layer from the canvas</span>
+    });
+  };
+}]);
+</code></pre>
+<p>The <code>FileUploaderService</code> is a wrapper around the <code>$upload</code> module provided by the
+<a href="https://github.com/danialfarid/angular-file-upload">angular-file-upload</a> library. It exposes an <code>upload</code>
+method that returns the promise.</p>
+<p>On line 20 of the <code>image.js</code> file we start the file upload and store the promise into the <code>uploadPromise</code>
+variable. We immediately append a function for when the promise is rejected (if there’s a problem with the
+file upload like network error, or validation errors) and we notify the user.</p>
+<p>After encoding the image on line 27, we call the <code>createNewLayer</code> and the <code>addImageToCanvas</code> methods passing
+them the promise.</p>
+<p>The <code>createNewLayer</code> method <em>renders</em> the new layer immediately – it simply pushes the new layer to the
+<code>layers</code> array – and uses the promise to take the thumbnail generated by the server. Once the promise is
+resolved, it adds the thumbnail to the layer object. Since the <code>layers</code> array is bounded to the view,
+AngularJS will automatically redraw the layer with the generated thumbnail.</p>
+<p>The <code>addImageToCanvas</code> method uses and external library to generate an image object from the base64 encoded
+image and appends it to the canvas. The code is left out because it is not the focus of this post. For the
+sake of discussion the library I’ve used is <a href="http://fabricjs.com/">FabricJS</a>.</p>
+<p>Both methods implement behaviour for when the promise is rejected. The <code>createNewLayer</code> method removes the
+layer from the layers lists, and the <code>addImageToCanvas</code> method removes the image from the canvas.</p>
+<h2>Advantages of using promises</h2>
+<p>The thing I like the most about promises is that you can instantiate one, pass it around, and append it as
+many <code>then</code> as you like. Your promise will only get resolved (or rejected) once and all your <code>then</code>s will get
+called. Also, you can append a <code>then</code> even if the promise has already been resolved. Your <code>then</code> will be called.</p>
+<p>There are other cool stuff promises provides. Like the ability to wait for more than one promise to resolve,
+or the ability to chain promises, but these will be topics for future posts.</p>
+<p>Until <em>then</em>, happy coding!</p>
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery for Bootstrap -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<!-- Bootstrap -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+  </body>
+</html>
+
