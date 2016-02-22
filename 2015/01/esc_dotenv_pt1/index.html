@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Explaining Source Code: Dotenv part 1 | Giuseppe Modarelli</title>
+
+    <!-- Bootstrap -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+<!-- Base -->
+<link rel="stylesheet" href="/css/base.css">
+
+<!-- Github Flavored Markdown Style -->
+<link rel="stylesheet" href="/github-markdown-css/github-markdown.css">
+
+<!-- Github Code Highlight -->
+<link rel="stylesheet" href="/node_modules/highlight.js/styles/github.css">
+  </head>
+
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">Giuseppe Modarelli</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+    </div><!--/.navbar-collapse -->
+  </div>
+</nav>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <h1><a href="/2015/01/esc_dotenv_pt1">Explaining Source Code: Dotenv part 1</a></h1>
+          <h6>February 5, 2015</h6>
+
+          <article class="markdown-body">
+            <p>This is the first in a series of posts about “Explaining Source Code”. Every week I will pick an interesting
+gem and I will try to explain each line of its source code, diving into interesting ruby code, patterns and
+techniques. Hopefully we’ll learn together every week.</p>
+<p>The gem of the day is <a href="https://github.com/bkeepers/dotenv">Dotenv</a>.
+As they say on the README, Dotenv is a:</p>
+<blockquote>
+<p>Shim to load environment variables from <code>.env</code> into <code>ENV</code> in <em>development</em>.</p>
+</blockquote>
+<h2>How to use it</h2>
+<p>You create a .env file on the root of you app with your config keys and values, like this:</p>
+<pre><code class="language-bash">MY_SECRET_ID=jkdsa89jkldas8y9p21bjl
+MY_SECRET_TOKEN=jdskalhiop12jldaskd
+</code></pre>
+<p>And than you load it in your app with:</p>
+<pre><code class="language-ruby"><span class="hljs-keyword">require</span> <span class="hljs-string">'dotenv'</span>
+Dotenv.load
+</code></pre>
+<h2>Let’s read the code</h2>
+<p>I always begin from the gem entry point, it this case the <code>.load</code> method that is defined inside the
+<code>lib/dotenv.rb</code> file.</p>
+<pre><code class="language-ruby"><span class="hljs-class"><span class="hljs-keyword">module</span> <span class="hljs-title">Dotenv</span></span>
+  extend <span class="hljs-keyword">self</span>
+
+  <span class="hljs-keyword">attr_accessor</span> <span class="hljs-symbol">:instrumenter</span>
+
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">load</span><span class="hljs-params">(*filenames)</span></span>
+    with(*filenames) <span class="hljs-keyword">do</span> |f|
+      <span class="hljs-keyword">if</span> File.exist?(f)
+        env = Environment.new(f)
+        instrument(<span class="hljs-string">'dotenv.load'</span>, <span class="hljs-symbol">:env</span> =&gt; env) { env.apply }
+      <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+
+  <span class="hljs-comment"># ...</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p>This file defines the <code>Dotenv</code> module, and then it extends the module with the module itself.</p>
+<p>This is a technique used to define class methods on the module, so that we can call <code>Dotenv.load</code>.</p>
+<p>For those who don’t know what the <code>extend</code> keyword does, here is a simple example.</p>
+<pre><code class="language-ruby"><span class="hljs-class"><span class="hljs-keyword">module</span> <span class="hljs-title">Utils</span></span>
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">something_useful</span> <span class="hljs-title">string</span></span>
+    string.upcase
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">StringUtils</span></span>
+  extend Utils
+<span class="hljs-keyword">end</span>
+
+StringUtils.respond_to? <span class="hljs-symbol">:something_useful</span> <span class="hljs-comment">#=&gt; true</span>
+StringUtils.something_useful <span class="hljs-string">'mystring'</span> <span class="hljs-comment">#=&gt; 'MYSTRING'</span>
+</code></pre>
+<p>By extending our <code>StringUtils</code> class with the <code>Utils</code> module, we’ve added the <code>something\_useful</code> method
+as a class method to the <code>StringUtils</code> class.</p>
+<p>Now let’s take a look at the <code>load</code> method. It accepts a list of filename (0 or more) and it does something
+<code>_with_</code> each file.
+There are a bunch of things going on here. Let’s begin with the method parameters list.</p>
+<p>By using the <code>splat</code> (*) operator in front of a parameter name we are telling ruby to take all the
+arguments passed to the method and put them inside an <code>Array</code>.</p>
+<p>We can see how this works with a simple example:</p>
+<pre><code class="language-ruby"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">invite_people</span> <span class="hljs-title">*</span><span class="hljs-title">people</span></span>
+  people.each <span class="hljs-keyword">do</span> |person|
+    send_invitation_to person
+  <span class="hljs-keyword">end</span>
+
+  people.<span class="hljs-keyword">class</span> <span class="hljs-comment">#=&gt; Array</span>
+  people.inspect <span class="hljs-comment">#=&gt; [ "Andrea", "Luca", "Pawel" ]</span>
+<span class="hljs-keyword">end</span>
+
+invite_people <span class="hljs-string">"Andrea"</span>, <span class="hljs-string">"Luca"</span>, <span class="hljs-string">"Pawel"</span>
+</code></pre>
+<p>The first line of the <code>load</code> method takes all the filenames and passes them to a <code>with</code> method.
+Let’s see what this <code>with</code> method does.</p>
+<pre><code class="language-ruby"><span class="hljs-class"><span class="hljs-keyword">module</span> <span class="hljs-title">Dotenv</span></span>
+  extend <span class="hljs-keyword">self</span>
+
+  <span class="hljs-keyword">attr_accessor</span> <span class="hljs-symbol">:instrumenter</span>
+
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">load</span><span class="hljs-params">(*filenames)</span></span>
+    with(*filenames) <span class="hljs-keyword">do</span> |f|
+      <span class="hljs-keyword">if</span> File.exist?(f)
+        env = Environment.new(f)
+        instrument(<span class="hljs-string">'dotenv.load'</span>, <span class="hljs-symbol">:env</span> =&gt; env) { env.apply }
+      <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+
+  <span class="hljs-comment"># ...</span>
+
+  <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">with</span><span class="hljs-params">(*filenames, &amp;block)</span></span>
+    filenames &lt;&lt; <span class="hljs-string">'.env'</span> <span class="hljs-keyword">if</span> filenames.empty?
+
+    {}.tap <span class="hljs-keyword">do</span> |hash|
+      filenames.each <span class="hljs-keyword">do</span> |filename|
+        hash.merge! block.call(File.expand_path(filename)) || {}
+      <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+
+  <span class="hljs-comment"># ...</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p>It accepts the same list of filenames as the <code>load</code> method does and it takes a block. The first line of the
+method checks if the filenames list is empty. It true, it pushes a default file, the .env file, to the
+filenames array. That’s why we can call <code>Dotenv.load</code> without arguments.</p>
+<p>Then it creates a hash, populates it with the results of the block execution for each file and returns it.
+There’s lots of stuff going on here in just three lines of code so let’s try to break it down.</p>
+<p><code>Tap</code>. As the ruby doc says, the tap method <em>yields self to the block and returns self</em>.So, if we call <code>tap</code>
+on a hash, we’ll get the hash passed to the block and we’ll get the hash back (as the return value) when the
+block execution ends. It is very useful when you need to chain calls to an object.</p>
+<p>Inside the <code>tap</code> block we then iterate over each filename, and we call the block that was originally passed
+to the <code>with</code> method with each filename. The block execution will return an hash (we can infer this since the
+code is calling the <code>hash.merge!</code> method with the result of the block) or a nil value (if the file does not
+exist), that’s why we have the <code>|| {}</code>.</p>
+<p>Let’s jump back to the <code>load</code> method and take a look at the block. It first checks if the file exists and
+then it initializes an <code>Environment</code> object with the file and calls the <code>instrument</code> method. The <code>instrument</code>
+method accepts 2 arguments and a block. Before jumping to the <code>Environment</code> class let’s take a quick look at
+the <code>instrument</code> method.</p>
+<p>It checks if an <code>instrumenter</code> is defined. If it’s defined it delegates the <code>instrument</code> call to it, passing
+all the parameters. Otherwise it just calls the block. In a simple use case(a simple ruby or sinatra app, not
+a Rails one) we won’t need an <code>instrumenter</code>, so the block will be called. The block just calls the <code>apply</code>
+method on the instance of the <code>Environment</code> class.</p>
+<h2><code>What we've learned</code></h2>
+<p>I’m running out of time today, so we’ll continue exploring the <code>Dotenv</code> gem next Thursday. Before ending this
+post I’d like to recap what we learned reading this gem:</p>
+<ol>
+<li><code>extend</code> – When you extend a class A with a module B you add all the module B methods as class methods to
+the class A. You can extend a module with self, making all the defined methods available as class method on
+the module.</li>
+<li><code>splat (\*)</code>- When used in a parameters list, it groups the parameters into an array</li>
+<li><code>tap</code> – When called on an object, it yields self to the block, and returns self. It’s useful when you need
+to do stuff to the object (changing state and so on) and return it cause you need to chain other calls on the
+object.</li>
+</ol>
+<p>A special note on <code>blocks</code>. When dealing with (and writing) ruby code you will always encounter blocks. They
+are so common that explaining them every time we encounter one in these series would be annoying, that’s why
+if you read my post it feels like I’m skipping over them. But I have a blog post on my todo list that will
+deal only with blocks, lambdas and procs and all their use cases.</p>
+<p>Happy coding!</p>
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery for Bootstrap -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<!-- Bootstrap -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+  </body>
+</html>
+
