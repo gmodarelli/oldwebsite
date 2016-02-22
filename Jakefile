@@ -8,6 +8,7 @@ var exec = require('child_process').exec;
 var yaml = require('js-yaml');
 var moment = require('moment');
 var _ = require('lodash');
+var htmlMd = require('html-md');
 
 var md = require('markdown-it')({
   html: true,
@@ -157,5 +158,13 @@ task('home', function() {
   var html = ejs.render(template, { posts: sortedPosts }, { filename: join("templates", "index.ejs") });
 
   write(destination, html);
+});
+
+desc('Convert html to markdown');
+task('convert', function(path) {
+  var html = read(path, 'utf8');
+  var newPath = path + ".md";
+  var markdown = htmlMd(html);
+  write(newPath, markdown);
 });
 
