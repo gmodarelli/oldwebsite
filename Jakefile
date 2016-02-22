@@ -17,7 +17,10 @@ task('publish', function(post_name) {
   var post = Post.parse(post_name);
   var destination = Post.createDestination(post.link);
 
+  console.log("Publishing \"" + post.title + "\" to \"" + post.link + "\"");
+
   publish(post, destination);
+  jake.Task['home'].invoke();
 });
 
 desc('Unpublish a post');
@@ -27,6 +30,7 @@ task('unpublish', function(post_name) {
 
 desc('Update homepage');
 task('home', function() {
+  console.log("Updating the homepage feed.");
   updateFeed();
 });
 
